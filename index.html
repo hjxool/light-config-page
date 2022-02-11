@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>配置</title>
+  <link rel="stylesheet" href="./module/element-ui.css">
+  <style>
+    [v-cloak] {
+      display: none !important;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+    }
+
+    #config {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-columns: 20% auto;
+    }
+
+    #content {
+      background: #EDEDED;
+      position: relative;
+    }
+
+    .content_title {
+      border: 1px solid #E7E7E7;
+      border-radius: 10px;
+      width: 80%;
+      height: 60px;
+      background: #F6F6F6;
+      margin-top: 20px;
+      margin-left: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 36px;
+      box-shadow: 0px 0px 10px #888888;
+    }
+
+    .config_detail {
+      border: 1px solid #708090;
+      width: 80%;
+      display: grid;
+      grid-auto-rows: 36px;
+      margin-top: 30px;
+      margin-left: 16px;
+      border-radius: 10px;
+    }
+
+    .config_detail_row {
+      display: grid;
+      grid-template-columns: 30% auto;
+      align-items: center;
+      justify-items: start;
+    }
+
+    .border_right {
+      width: 50%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: start;
+      justify-self: center;
+    }
+
+    .el-input__inner {
+      border-radius: 0;
+      border: 1px solid #EAEAEA;
+      height: 30px;
+      line-height: 30px;
+    }
+
+    .el-input__inner:focus {
+      border-color: #708090;
+    }
+
+    .el-input-number {
+      line-height: 30px;
+    }
+
+    .el-input-number.is-controls-right .el-input-number__decrease,
+    .el-input-number.is-controls-right .el-input-number__increase {
+      line-height: 10px;
+    }
+
+    .el-input__icon {
+      line-height: 30px;
+    }
+
+    .el-radio-button__inner {
+      padding: 6px 9px;
+    }
+  </style>
+</head>
+
+<body>
+  <div v-loading="page_loading" element-loading-text="拼命加载中" element-loading-spinner="el-icon-loading"
+    element-loading-background="rgba(0, 0, 0, 0.8)" id="config" v-cloak>
+    <el-menu @select="menuSelected" default-active="1" background-color="#494949" text-color="#fff"
+      active-text-color="#fff">
+      <el-menu-item index="1">设备信息</el-menu-item>
+      <!-- <el-menu-item index="2">时间服务器配置</el-menu-item> -->
+      <el-menu-item index="3">mqtt配置</el-menu-item>
+      <el-submenu index="4">
+        <template slot="title">媒体配置</template>
+        <el-menu-item v-for="i,key_index in cameras" :index="media_index(key_index)">媒体配置#{{key_index+1}}
+        </el-menu-item>
+      </el-submenu>
+      <el-menu-item index="5">系统配置</el-menu-item>
+      <el-menu-item index="6">网络配置</el-menu-item>
+    </el-menu>
+    <div id="content">
+      <div class="content_title">
+        <i class="el-icon-s-tools"></i>
+        <span>{{contentTitle}}</span>
+      </div>
+
+      <div v-show="menu_select==1" class="config_detail">
+        <div class="config_detail_row">
+          <span class="border_right">编译时间</span>
+          <span>{{dev_info.compile_time}}</span>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">硬件版本</span>
+          <span>{{dev_info.hardware_version}}</span>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">软件版本</span>
+          <span>{{dev_info.software_version}}</span>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">物理地址</span>
+          <span>{{dev_info.mac}}</span>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">设备型号</span>
+          <span>{{dev_info.model}}</span>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">设备类型</span>
+          <span>{{dev_info.type}}</span>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">序列号</span>
+          <span>{{dev_info.serial_number}}</span>
+        </div>
+      </div>
+
+      <div v-show="menu_select==2" class="config_detail">
+        <div class="config_detail_row">
+          <span class="border_right">服务是否开启</span>
+          <el-switch v-model="ntp_config.ntp_activate"></el-switch>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">地址</span>
+          <el-input v-model="ntp_config.ntp_server_address" style="width: 200px;"></el-input>
+        </div>
+      </div>
+
+      <div v-show="menu_select==3" class="config_detail">
+        <div class="config_detail_row">
+          <span class="border_right">是否开启</span>
+          <el-switch v-model="mqtt_config.mqtt_activate"></el-switch>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">ID</span>
+          <el-input v-model="mqtt_config.mqtt_id" style="width: 200px;"></el-input>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">心跳间隔</span>
+          <el-input-number v-model="mqtt_config.mqtt_keep_alive_interval" controls-position="right"
+            style="width: 100px;"></el-input-number>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">用户名</span>
+          <el-input v-model="mqtt_config.mqtt_user" style="width: 200px;"></el-input>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">密码</span>
+          <el-input v-model="mqtt_config.mqtt_password" style="width: 200px;"></el-input>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">服务器地址</span>
+          <el-input v-model="mqtt_config.mqtt_server_address" style="width: 200px;"></el-input>
+        </div>
+      </div>
+
+      <div v-show="menu_select==4" class="config_detail">
+        <div class="config_detail_row">
+          <span class="border_right">型号</span>
+          <el-input v-model="cameras[av_config_index].modelNo" style="width: 300px;"></el-input>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">名称</span>
+          <el-input v-model="cameras[av_config_index].name" style="width: 300px;"></el-input>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">ID</span>
+          <el-input v-model="cameras[av_config_index].uuid" style="width: 300px;"></el-input>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">拉流地址</span>
+          <el-input v-model="cameras[av_config_index].rtsp" style="width: 300px;"></el-input>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">推流地址</span>
+          <el-input v-model="cameras[av_config_index].rtmp" style="width: 300px;"></el-input>
+        </div>
+      </div>
+
+      <div v-show="menu_select==5" class="config_detail">
+        <div class="config_detail_row">
+          <span class="border_right">设备名称</span>
+          <el-input v-model="localCfg.name" style="width: 200px;"></el-input>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">设备类型</span>
+          <el-input v-model="localCfg.device_type" style="width: 200px;"></el-input>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">注册ID</span>
+          <el-input v-model="localCfg.uuid" style="width: 200px;"></el-input>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">区域</span>
+          <el-input v-model="localCfg.area_code" style="width: 200px;"></el-input>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">是否开启RDM功能</span>
+          <el-switch v-model="localCfg.local_rdm_activate"></el-switch>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">调光模式</span>
+          <el-select v-model="localCfg.dimmer_work_mode" placeholder="请选择" style="width: 120px;">
+            <el-option v-for="i in dimmer_work_mode" :value="i.mode" :label="i.name"></el-option>
+          </el-select>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">Artnet传输地址</span>
+          <el-input v-model="localCfg.artnet_model" style="width: 200px;"></el-input>
+        </div>
+        <div v-show="localCfg.dimmer_work_mode==1" class="config_detail_row">
+          <span class="border_right">调光发送地址</span>
+          <el-input v-model="localCfg.artnet_ip" style="width: 200px;"></el-input>
+        </div>
+        <div v-show="localCfg.dimmer_work_mode==1" class="config_detail_row">
+          <span class="border_right">调光发送端口</span>
+          <el-input v-model="localCfg.artnet_port" style="width: 200px;"></el-input>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">中心服务器地址</span>
+          <el-input v-model="localCfg.dimmer_server_ip" style="width: 200px;"></el-input>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">中心服务器端口</span>
+          <el-input v-model="localCfg.dimmer_server_port" style="width: 200px;"></el-input>
+        </div>
+      </div>
+
+      <div v-show="menu_select==6" class="config_detail">
+        <div style="display: flex;justify-content: center;align-items: center;">
+          <!-- <el-radio-group v-model="net_config.Net_WorkMode" @change="net_config_switch">
+            <el-radio-button label="0">自动获取IP</el-radio-button>
+            <el-radio-button label="1">设置静态IP</el-radio-button>
+          </el-radio-group> -->
+          <el-checkbox v-model="DhcpNetwork" @change="net_config_switch">自动获取IP</el-checkbox>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">IP地址</span>
+          <el-input v-model="net_config.Net_IP" :disabled="DhcpNetwork" @blur="check_ip_input(net_config.Net_IP)"
+            style="width: 200px;"></el-input>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">网关</span>
+          <el-input v-model="net_config.Net_GATEWAY" :disabled="DhcpNetwork"
+            @blur="check_ip_input(net_config.Net_GATEWAY)" style="width: 200px;"></el-input>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">子网掩码</span>
+          <el-input v-model="net_config.Net_NETMASK" :disabled="DhcpNetwork"
+            @blur="check_ip_input(net_config.Net_NETMASK)" style="width: 200px;"></el-input>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">物理地址</span>
+          <span>{{net_config.Net_MAC}}</span>
+        </div>
+      </div>
+
+      <el-row style="position: absolute;bottom: 50px;right: 0;left: 0;margin: 0 auto;width: 156px;">
+        <el-button @click="submit_form" type="primary">提交</el-button>
+        <!-- <el-button @click="reset_form">重置</el-button> -->
+      </el-row>
+    </div>
+  </div>
+
+  <script src="./module/jquery-3.6.0.js"></script>
+  <script src="./module/vue.js"></script>
+  <script src="./module/element-ui.js"></script>
+  <script src="./module/axios.min.js"></script>
+  <script>
+    let config = new Vue({
+      el: '#config',
+      data: {
+        // 时间服务器配置
+        ntp_config: {
+          ntp_activate: false,//是否开启
+          ntp_server_address: ''//地址
+        },
+        // mqtt配置
+        mqtt_config: {
+          mqtt_activate: false,//是否开启
+          mqtt_id: "",//id
+          mqtt_keep_alive_interval: 0,//心跳间隔
+          mqtt_password: "",//密码
+          mqtt_server_address: "",//服务器地址
+          mqtt_user: "",//用户名
+        },
+        // 设备信息
+        dev_info: {
+          compile_time: "",//编译时间
+          hardware_version: "",//硬件版本
+          mac: "",//物理地址
+          model: "",//设备型号
+          serial_number: "",//序列号
+          software_version: "",//软件版本
+          type: "",//设备类型
+        },
+        // 媒体配置
+        cameras: [
+          {
+            modelNo: "",//型号
+            name: "hik",//名称
+            rtsp: "",//拉流地址
+            rtmp: "",//推流地址
+            uuid: "64"//id
+          }
+        ],
+        // 系统配置
+        localCfg: {
+          area_code: "cd",//区域
+          artnet_ip: "",//调光发送地址
+          artnet_model: "",//Artnet传输地址
+          artnet_port: 0,//调光发送端口
+          device_type: "",//设备类型
+          dimmer_server_ip: "",//中心服务器地址
+          dimmer_server_port: 0,//中心服务器端口
+          dimmer_work_mode: 2,//三种调光模式
+          local_rdm_activate: false,//是否开启RDM功能
+          name: "",//设备名称
+          uuid: ""//注册ID
+        },
+        // 网络配置
+        net_config: {
+          Net_Command: "",//指令
+          Net_DeviceType: 4,//
+          Net_GATEWAY: "",//网关
+          Net_IP: "",//ip地址
+          Net_MAC: "",//物理地址
+          Net_NETMASK: "",//子网掩码
+          Net_WorkMode: 0//切换网络获取方式
+        },
+        menu_select: 1,//导航栏选中目标
+        contentTitle: '设备信息',//配置项标题
+        av_config_index: 0,//媒体配置索引
+        dimmer_work_mode: [
+          { mode: 0, name: 'USB调光' },
+          { mode: 1, name: '网络调光' },
+          { mode: 2, name: '本地调光' }
+        ],
+        DhcpNetwork: false,//动态IP时，不能设置IP
+        url_prefix: '',//接口前缀
+        gateway_config_url: '',//网关接口
+        net_config_url: '',//网络配置接口
+        page_loading: true,//页面加载时遮罩
+      },
+      created: function () {
+        this.get_url_prefix()
+        axios({
+          method: 'get',
+          url: this.gateway_config_url,
+        }).then(res => {
+          console.log(res)
+          this.ntp_config = res.data.ntp_config;
+          this.mqtt_config = res.data.mqtt_config;
+          this.dev_info = res.data.dev_info;
+          this.cameras = res.data.cameras;
+          this.localCfg = res.data.localCfg;
+        });
+        axios({
+          method: 'get',
+          url: this.net_config_url
+        }).then(res => {
+          console.log(res)
+          this.net_config = res.data
+          if (this.net_config.Net_WorkMode == 0) {
+            this.net_config.Net_Command = 'HsSetDhcpNetwork'
+            this.DhcpNetwork = true
+          } else {
+            this.net_config.Net_Command = 'HsSetStaticNetwork'
+            this.DhcpNetwork = false
+          }
+        });
+      },
+      mounted: function () {
+        this.page_loading = false
+      },
+      methods: {
+        // 验证IP输入是否合法
+        check_ip_input: function (ip) {
+          let reg = /((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})(\.((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})){3}/
+          if (!reg.test(ip)) {
+            this.$message.error('只能为0-255的数字')
+          }
+        },
+        // 正则获取前缀
+        get_url_prefix: function () {
+          let reg = new RegExp('http[s]?://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+')
+          this.url_prefix = location.href.match(reg)[0]
+          this.gateway_config_url = `${this.url_prefix}:8880/gatewayconfig`
+          this.net_config_url = `${this.url_prefix}:8880/net_config`
+        },
+        // 传递选中索引
+        menuSelected: function (index, path) {
+          this.menu_select = Number(path[0]);
+          switch (path[0]) {
+            case '1':
+              this.contentTitle = '设备信息';
+              break;
+            case '2':
+              this.contentTitle = '时间服务器配置';
+              break;
+            case '3':
+              this.contentTitle = 'mqtt配置';
+              break;
+            case '4':
+              let temp = path[1].split('-')[1];
+              this.contentTitle = `媒体配置#${temp}`;
+              this.av_config_index = temp - 1;
+              break;
+            case '5':
+              this.contentTitle = '系统配置';
+              break;
+            case '6':
+              this.contentTitle = '网络配置';
+              break;
+          }
+        },
+        // 媒体配置索引
+        media_index: function (index) {
+          return `4-${index + 1}`;
+        },
+        // 将网络设置切换关联发送命令
+        net_config_switch: function () {
+          if (this.DhcpNetwork) {
+            this.net_config.Net_WorkMode = 0
+            this.net_config.Net_Command = 'HsSetDhcpNetwork'
+          } else {
+            this.net_config.Net_WorkMode = 1
+            this.net_config.Net_Command = 'HsSetStaticNetwork'
+          }
+          // if (this.net_config.Net_WorkMode == 0) {
+          //   this.net_config.Net_Command = 'HsSetDhcpNetwork'
+          //   this.DhcpNetwork = true
+          // } else {
+          //   this.net_config.Net_Command = 'HsSetStaticNetwork'
+          //   this.DhcpNetwork = false
+          // }
+          // this.net_config.Net_WorkMode = Number(this.net_config.Net_WorkMode)
+        },
+        submit_form: function () {
+          this.$confirm('提交后会重启设备，是否继续？', '提示', {
+            confirmButtonText: '确认',
+            cancelButtonText: '取消',
+            type: 'warning',
+          }).then(() => {
+            switch (this.menu_select) {
+              case 6:
+                console.log(typeof (this.net_config.Net_WorkMode))
+                axios({
+                  method: 'post',
+                  url: this.net_config_url,
+                  data: this.net_config
+                }).then(res => {
+                  console.log(res)
+                })
+                break;
+              default:
+                axios({
+                  method: 'post',
+                  url: this.gateway_config_url,
+                  data: {
+                    ntp_config: this.ntp_config,
+                    mqtt_config: this.mqtt_config,
+                    dev_info: this.dev_info,
+                    cameras: this.cameras,
+                    localCfg: this.localCfg
+                  }
+                }).then((res) => {
+                  console.log(res)
+                })
+                break;
+            }
+            this.$message.success('提交成功，设备重启中')
+          }).catch(() => {
+            this.$message.info('取消提交')
+          })
+
+        },
+        reset_form: function () {
+          for (let i in this.ntp_config) {
+            this.ntp_config[i] = '';
+          }
+          // this.ntp_config.ntp_server_address = '';
+          // this.mqtt_config.mqtt_keep_alive_interval = 0;
+          // this.mqtt_config.mqtt_password = "";
+          // this.mqtt_config.mqtt_server_address = "";
+          // this.mqtt_config.mqtt_user = "";
+          // this.localCfg.artnet_ip = '';
+          // this.localCfg.artnet_model = "";
+          // this.localCfg.artnet_port = 0
+          // this.localCfg.dimmer_server_ip = "";
+          // this.localCfg.dimmer_server_port = 0;
+          // for (let i of this.cameras) {
+          //   i.pull_address = '';
+          //   i.push_address = '';
+          // }
+        }
+      }
+    })
+  </script>
+</body>
+
+</html>
