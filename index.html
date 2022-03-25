@@ -416,7 +416,28 @@
       mounted: function () {
         this.page_loading = false
       },
+      watch: {
+        'localCfg.dimmer_server_port': {
+          handler (newval) {
+            this.debounce(this.temp_fun(), 1000, newval)
+          }
+        }
+      },
       methods: {
+        debounce (fun, delay, ...params) {
+          console.log('防抖', params)
+          let timer
+          return () => {
+            console.log('防抖return')
+            clearTimeout(timer)
+            timer = setTimeout(() => {
+              fun.apply(this, params)
+            }, delay)
+          }
+        },
+        temp_fun (params) {
+          console.log('触发了temp', params)
+        },
         // 验证IP输入是否合法
         check_ip_input: function (ip) {
           let reg = /((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})(\.((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})){3}/
