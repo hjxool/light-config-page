@@ -560,8 +560,8 @@
         },
         // 验证输入
         verify_input (value) {
-          reg = /^\d+$/
-          if (reg.test(value) | value.length == 0) {
+          reg = /^\d*$/
+          if (reg.test(value)) {
             this.submit_ban = false
           } else {
             this.$message.error('只能输入数字')
