@@ -419,19 +419,22 @@
       watch: {
         'localCfg.dimmer_server_port': {
           handler (newval) {
-            this.debounce(this.temp_fun(), 1000, newval)
+            this.debounce(this.temp_fun, 1000, newval)
           }
         }
       },
       methods: {
         debounce (fun, delay, ...params) {
           console.log('防抖', params)
-          let timer
-          return () => {
+          // fun.apply(this, params)
+          let timer = null
+          return function () {
             console.log('防抖return')
             clearTimeout(timer)
             timer = setTimeout(() => {
               fun.apply(this, params)
+              console.log('防抖return')
+
             }, delay)
           }
         },
