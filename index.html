@@ -14,6 +14,8 @@
 
     * {
       box-sizing: border-box;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     body {
@@ -21,8 +23,9 @@
     }
 
     #config {
-      width: 100vw;
-      height: 100vh;
+      width: 100%;
+      height: 100%;
+      position: absolute;
       display: grid;
       grid-template-columns: 20% auto;
     }
@@ -65,11 +68,6 @@
     }
 
     .border_right {
-      width: 50%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: start;
       justify-self: center;
     }
 
@@ -112,19 +110,25 @@
       <!-- <el-menu-item index="2">时间服务器配置</el-menu-item> -->
       <el-menu-item index="3">mqtt配置</el-menu-item>
       <el-submenu index="4">
-        <template slot="title">媒体配置</template>
+        <slot slot="title">媒体配置</slot>
         <el-menu-item v-for="i,key_index in cameras" :index="media_index(key_index)">媒体配置#{{key_index+1}}
         </el-menu-item>
       </el-submenu>
       <el-menu-item index="5">系统配置</el-menu-item>
       <el-menu-item index="6">网络配置</el-menu-item>
+      <el-submenu index="7">
+        <template slot="title">灯光通道配置</template>
+        <el-menu-item v-for="light,index in SerialPortConfig" :index="light_index(index)">灯光通道配置#{{index+1}}
+        </el-menu-item>
+      </el-submenu>
     </el-menu>
+
     <div id="content">
       <div class="content_title">
         <i class="el-icon-s-tools"></i>
         <span>{{contentTitle}}</span>
       </div>
-
+      <!-- 设备信息 -->
       <div v-show="menu_select==1" class="config_detail">
         <div class="config_detail_row">
           <span class="border_right">编译时间</span>
@@ -155,7 +159,7 @@
           <span>{{dev_info.serial_number}}</span>
         </div>
       </div>
-
+      <!-- 时间服务器配置 -->
       <div v-show="menu_select==2" class="config_detail">
         <div class="config_detail_row">
           <span class="border_right">服务是否开启</span>
@@ -166,7 +170,7 @@
           <el-input v-model="ntp_config.ntp_server_address" style="width: 200px;"></el-input>
         </div>
       </div>
-
+      <!-- mqtt配置 -->
       <div v-show="menu_select==3" class="config_detail">
         <div class="config_detail_row">
           <span class="border_right">是否开启</span>
@@ -194,7 +198,7 @@
           <el-input v-model="mqtt_config.mqtt_server_address" style="width: 200px;"></el-input>
         </div>
       </div>
-
+      <!-- 媒体配置 -->
       <div v-show="menu_select==4" class="config_detail">
         <div class="config_detail_row">
           <span class="border_right">型号</span>
@@ -217,7 +221,7 @@
           <el-input v-model="cameras[av_config_index].rtmp" style="width: 300px;"></el-input>
         </div>
       </div>
-
+      <!-- 系统配置 -->
       <div v-show="menu_select==5" class="config_detail">
         <div class="config_detail_row">
           <span class="border_right">设备名称</span>
@@ -267,7 +271,7 @@
             @blur="verify_input(localCfg.dimmer_server_port)"></el-input>
         </div>
       </div>
-
+      <!-- 网络配置 -->
       <div v-show="menu_select==6" class="config_detail">
         <div style="display: flex;justify-content: center;align-items: center;">
           <!-- <el-radio-group v-model="net_config.Net_WorkMode" @change="net_config_switch">
@@ -296,10 +300,43 @@
           <span>{{net_config.Net_MAC}}</span>
         </div>
       </div>
+      <!-- 灯光通道配置 -->
+      <div v-show="menu_select==7" class="config_detail">
+        <div class="config_detail_row">
+          <span class="border_right">波特率</span>
+          <el-input v-model.number="SerialPortConfig[light_channel_index].baudrate"
+            @blur="verify_input(SerialPortConfig[light_channel_index].baudrate)" style="width: 200px;">
+          </el-input>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">数据位</span>
+          <el-select v-model="SerialPortConfig[light_channel_index].data_bits" placeholder="请选择" style="width: 120px;">
+            <el-option v-for="i in light_data_bits" :value="i" :label="i"></el-option>
+          </el-select>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">停止位</span>
+          <el-select v-model="SerialPortConfig[light_channel_index].stop_bits" placeholder="请选择" style="width: 120px;">
+            <el-option v-for="i in light_stop_bits" :value="i" :label="i"></el-option>
+          </el-select>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">奇偶校验</span>
+          <el-select v-model="SerialPortConfig[light_channel_index].parity" placeholder="请选择" style="width: 120px;">
+            <el-option v-for="i in light_parity" :value="i.model" :label="i.name"></el-option>
+          </el-select>
+        </div>
+        <div class="config_detail_row">
+          <span class="border_right">通道模式</span>
+          <el-select v-model="SerialPortConfig[light_channel_index].mode" placeholder="请选择" style="width: 150px;">
+            <el-option v-for="i in light_channel_model" :value="i.model" :label="i.name"></el-option>
+          </el-select>
+        </div>
+      </div>
 
       <el-row style="position: absolute;bottom: 50px;right: 0;left: 0;margin: 0 auto;width: 156px;">
         <el-button @click="submit_form" type="primary" :disabled="submit_ban">提交</el-button>
-        <!-- <el-button @click="reset_form">重置</el-button> -->
+        <el-button @click="set_light_config" v-show="menu_select==7">配置到所有通道</el-button>
       </el-row>
     </div>
   </div>
@@ -384,8 +421,33 @@
         gateway_config_url: '',//网关接口
         net_config_url: '',//网络配置接口
         page_loading: true,//页面加载时遮罩
+        // 灯光通道配置
+        SerialPortConfig: [
+          {
+            baudrate: 0,//输入波特率,
+            data_bits: 8,//数据位选8或7,
+            stop_bits: 0,//停止位0或2,
+            parity: 0,//奇偶校验00无01奇校验03偶校验,
+            mode: 0,//通道模式0 DMX512模式 1 RDM模式
+          }
+        ],
+        light_channel_index: 0,//灯光通道索引
+        light_data_bits: [8, 7],//数据位
+        light_stop_bits: [0, 2],//停止位
+        // 奇偶校验
+        light_parity: [
+          { model: 0, name: '无' },
+          { model: 1, name: '奇校验' },
+          { model: 3, name: '偶校验' },
+        ],
+        // 通道模式
+        light_channel_model: [
+          { model: 0, name: 'DMX512模式' },
+          { model: 1, name: 'RDM模式' },
+        ]
       },
       created: function () {
+        // 根据本地IP获取接口地址
         this.get_url_prefix()
         axios({
           method: 'get',
@@ -397,6 +459,10 @@
           this.dev_info = res.data.dev_info;
           this.cameras = res.data.cameras;
           this.localCfg = res.data.localCfg;
+          this.SerialPortConfig = res.data.SerialPortConfig
+          this.$nextTick(() => {
+            this.page_loading = false
+          })
         });
         axios({
           method: 'get',
@@ -412,9 +478,6 @@
             this.DhcpNetwork = false
           }
         });
-      },
-      mounted: function () {
-        this.page_loading = false
       },
       watch: {
         'localCfg.dimmer_server_port': {
@@ -452,11 +515,14 @@
         get_url_prefix: function () {
           let reg = new RegExp('http[s]?://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+')
           this.url_prefix = location.href.match(reg)[0]
+          console.log(location.href.match(reg))
+          // this.url_prefix = 'http://192.168.30.132'
           this.gateway_config_url = `${this.url_prefix}:8880/gatewayconfig`
           this.net_config_url = `${this.url_prefix}:8880/net_config`
         },
         // 传递选中索引
         menuSelected: function (index, path) {
+          let temp;
           this.menu_select = Number(path[0]);
           switch (path[0]) {
             case '1':
@@ -469,7 +535,7 @@
               this.contentTitle = 'mqtt配置';
               break;
             case '4':
-              let temp = path[1].split('-')[1];
+              temp = path[1].split('-')[1];
               this.contentTitle = `媒体配置#${temp}`;
               this.av_config_index = temp - 1;
               break;
@@ -479,11 +545,20 @@
             case '6':
               this.contentTitle = '网络配置';
               break;
+            case '7':
+              temp = path[1].split('-')[1];
+              this.contentTitle = `灯光通道配置#${temp}`;
+              this.light_channel_index = temp - 1;
+              break;
           }
         },
         // 媒体配置索引
         media_index: function (index) {
           return `4-${index + 1}`;
+        },
+        // 灯光通道索引
+        light_index (index) {
+          return `7-${index + 1}`;
         },
         // 将网络设置切换关联发送命令
         net_config_switch: function () {
@@ -529,7 +604,8 @@
                     mqtt_config: this.mqtt_config,
                     dev_info: this.dev_info,
                     cameras: this.cameras,
-                    localCfg: this.localCfg
+                    localCfg: this.localCfg,
+                    SerialPortConfig: this.SerialPortConfig
                   }
                 }).then((res) => {
                   console.log(res)
@@ -540,26 +616,13 @@
           }).catch(() => {
             this.$message.info('取消提交')
           })
-
         },
-        reset_form: function () {
-          for (let i in this.ntp_config) {
-            this.ntp_config[i] = '';
-          }
-          // this.ntp_config.ntp_server_address = '';
-          // this.mqtt_config.mqtt_keep_alive_interval = 0;
-          // this.mqtt_config.mqtt_password = "";
-          // this.mqtt_config.mqtt_server_address = "";
-          // this.mqtt_config.mqtt_user = "";
-          // this.localCfg.artnet_ip = '';
-          // this.localCfg.artnet_model = "";
-          // this.localCfg.artnet_port = 0
-          // this.localCfg.dimmer_server_ip = "";
-          // this.localCfg.dimmer_server_port = 0;
-          // for (let i of this.cameras) {
-          //   i.pull_address = '';
-          //   i.push_address = '';
-          // }
+        set_light_config () {
+          // 获取正在编辑的通道索引修改全部通道变量
+          let common_config = this.SerialPortConfig[this.light_channel_index]
+          this.SerialPortConfig.forEach(element => {
+            Object.assign(element, common_config)
+          });
         },
         // 验证输入
         verify_input (value) {
