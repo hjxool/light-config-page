@@ -46,7 +46,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      line-height: 36px;
       box-shadow: 0px 0px 10px #888888;
     }
 
@@ -54,7 +53,7 @@
       border: 1px solid #708090;
       width: 80%;
       display: grid;
-      grid-auto-rows: 36px;
+      grid-auto-rows: 50px;
       margin-top: 30px;
       margin-left: 16px;
       border-radius: 10px;
@@ -98,6 +97,42 @@
     .el-radio-button__inner {
       padding: 6px 9px;
     }
+
+    .select_file_box {
+      height: 30px;
+      display: flex;
+      align-items: center;
+      margin-right: 10px;
+    }
+
+    .upload_button {
+      width: 140px;
+      height: 32px;
+      background-color: rgba(64, 158, 255);
+      border-radius: 10px;
+      cursor: pointer;
+      color: white;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .upload_button:hover {
+      opacity: 0.8;
+    }
+
+    .upload_files:hover .cancel_upload {
+      display: inline;
+    }
+
+    .cancel_upload {
+      font-size: 16px;
+      color: black;
+      display: none;
+      cursor: pointer;
+      margin-right: 10px;
+    }
   </style>
 </head>
 
@@ -121,6 +156,7 @@
         <el-menu-item v-for="light,index in SerialPortConfig" :index="light_index(index)">灯光通道配置#{{index+1}}
         </el-menu-item>
       </el-submenu>
+      <el-menu-item index="8">系统维护</el-menu-item>
     </el-menu>
 
     <div id="content">
@@ -333,6 +369,27 @@
           </el-select>
         </div>
       </div>
+      <!-- 系统维护 -->
+      <div v-show="menu_select==8" class="config_detail">
+        <div class="config_detail_row">
+          <span class="border_right">远程升级</span>
+          <div style="display: flex;align-items: center;">
+            <form class="select_file_box">
+              <!-- 隐藏原始样式 -->
+              <input type="file" style="width:0;height:0;" id="select_file" @change="selcet_file">
+              <!-- 自定义样式 -->
+              <div class="upload_button" @click="click_select">
+                <i class="el-icon-upload" style="font-size: 20px;margin-right: 4px;padding-top: 4px;"></i>
+                {{upload_files_list.length>0?'已上传更新':'选择文件'}}
+              </div>
+              <div class="upload_files" v-if="upload_files_list.length>0">
+                <span style="font-size: 16px;margin: 0 10px;">{{upload_files_list[0].name}}</span>
+                <i class="el-icon-circle-close cancel_upload" @click="cancel_upload"></i>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
 
       <el-row style="position: absolute;bottom: 50px;right: 0;left: 0;margin: 0 auto;width: 156px;">
         <el-button @click="submit_form" type="primary" :disabled="submit_ban">提交</el-button>
@@ -342,6 +399,7 @@
   </div>
 
   <script src="./module/jquery-3.6.0.js"></script>
+  <script src="./module/spark-md5.min.js"></script>
   <script src="./module/vue.js"></script>
   <script src="./module/element-ui.js"></script>
   <script src="./module/axios.min.js"></script>
@@ -420,7 +478,7 @@
         url_prefix: '',//接口前缀
         gateway_config_url: '',//网关接口
         net_config_url: '',//网络配置接口
-        page_loading: true,//页面加载时遮罩
+        page_loading: false,//页面加载时遮罩
         // 灯光通道配置
         SerialPortConfig: [
           {
@@ -444,7 +502,8 @@
         light_channel_model: [
           { model: 0, name: 'DMX512模式' },
           { model: 1, name: 'RDM模式' },
-        ]
+        ],
+        upload_files_list: [],//提交时上传的文件列表
       },
       created: function () {
         // 根据本地IP获取接口地址
@@ -460,9 +519,10 @@
           this.cameras = res.data.cameras;
           this.localCfg = res.data.localCfg;
           this.SerialPortConfig = res.data.SerialPortConfig
-          this.$nextTick(() => {
-            this.page_loading = false
-          })
+          // this.$nextTick(() => {
+          //   this.page_loading = false
+          // })
+          this.page_loading = false
         });
         axios({
           method: 'get',
@@ -479,31 +539,7 @@
           }
         });
       },
-      watch: {
-        'localCfg.dimmer_server_port': {
-          handler (newval) {
-            this.debounce(this.temp_fun, 1000, newval)
-          }
-        }
-      },
       methods: {
-        debounce (fun, delay, ...params) {
-          console.log('防抖', params)
-          // fun.apply(this, params)
-          let timer = null
-          return function () {
-            console.log('防抖return')
-            clearTimeout(timer)
-            timer = setTimeout(() => {
-              fun.apply(this, params)
-              console.log('防抖return')
-
-            }, delay)
-          }
-        },
-        temp_fun (params) {
-          console.log('触发了temp', params)
-        },
         // 验证IP输入是否合法
         check_ip_input: function (ip) {
           let reg = /((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})(\.((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})){3}/
@@ -549,6 +585,9 @@
               temp = path[1].split('-')[1];
               this.contentTitle = `灯光通道配置#${temp}`;
               this.light_channel_index = temp - 1;
+              break;
+            case '8':
+              this.contentTitle = '系统维护';
               break;
           }
         },
@@ -633,6 +672,35 @@
             this.$message.error('只能输入数字')
             this.submit_ban = true
           }
+        },
+        // 上传文件
+        click_select () {
+          select_file.click()
+        },
+        selcet_file () {
+          // 用于显示和提交的文件列表
+          this.upload_files_list = []
+          for (let i = 0; i < select_file.files.length; i++) {
+            this.upload_files_list.push(select_file.files[i])
+          }
+          let data_stream = new FileReader()
+          data_stream.readAsBinaryString(select_file.files[0])
+          data_stream.onload = (e) => {
+            let md = SparkMD5.hashBinary(data_stream.result)
+            let form_obj = new FormData()
+            form_obj.append(this.upload_files_list[0].name, select_file.files[0])
+            axios({
+              method: 'post',
+              url: `http://192.168.30.136:8880/upload?md5=${md}`,
+              data: form_obj,
+            }).then(res => {
+              console.log(res)
+            })
+          }
+        },
+        // 清除上传的文件
+        cancel_upload () {
+          this.upload_files_list.splice(0, 1)
         },
       }
     })
