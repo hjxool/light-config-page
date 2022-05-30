@@ -194,6 +194,20 @@
           <span class="border_right">序列号</span>
           <span>{{dev_info.serial_number}}</span>
         </div>
+        <div class="config_detail_row">
+          <span class="border_right">调光模式</span>
+          <el-select v-model="dev_info.dimmer_work_mode" placeholder="请选择" style="width: 120px;">
+            <el-option v-for="i in dimmer_work_mode" :value="i.mode" :label="i.name"></el-option>
+          </el-select>
+        </div>
+        <div v-show="dev_info.dimmer_work_mode==1" class="config_detail_row">
+          <span class="border_right">调光发送地址</span>
+          <el-input v-model="dev_info.artnet_ip" style="width: 200px;"></el-input>
+        </div>
+        <div v-show="dev_info.dimmer_work_mode==1" class="config_detail_row">
+          <span class="border_right">调光发送端口</span>
+          <el-input v-model="dev_info.artnet_port" style="width: 200px;"></el-input>
+        </div>
       </div>
       <!-- 时间服务器配置 -->
       <div v-show="menu_select==2" class="config_detail">
@@ -280,22 +294,8 @@
           <el-switch v-model="localCfg.local_rdm_activate"></el-switch>
         </div>
         <div class="config_detail_row">
-          <span class="border_right">调光模式</span>
-          <el-select v-model="localCfg.dimmer_work_mode" placeholder="请选择" style="width: 120px;">
-            <el-option v-for="i in dimmer_work_mode" :value="i.mode" :label="i.name"></el-option>
-          </el-select>
-        </div>
-        <div class="config_detail_row">
           <span class="border_right">Artnet传输地址</span>
           <el-input v-model="localCfg.artnet_model" style="width: 200px;"></el-input>
-        </div>
-        <div v-show="localCfg.dimmer_work_mode==1" class="config_detail_row">
-          <span class="border_right">调光发送地址</span>
-          <el-input v-model="localCfg.artnet_ip" style="width: 200px;"></el-input>
-        </div>
-        <div v-show="localCfg.dimmer_work_mode==1" class="config_detail_row">
-          <span class="border_right">调光发送端口</span>
-          <el-input v-model="localCfg.artnet_port" style="width: 200px;"></el-input>
         </div>
         <div class="config_detail_row">
           <span class="border_right">中心服务器地址</span>
@@ -431,6 +431,9 @@
           serial_number: "",//序列号
           software_version: "",//软件版本
           type: "",//设备类型
+          dimmer_work_mode: 2,//三种调光模式
+          artnet_ip: "",//调光发送地址
+          artnet_port: 0,//调光发送端口
         },
         // 媒体配置
         cameras: [
@@ -445,13 +448,10 @@
         // 系统配置
         localCfg: {
           area_code: "cd",//区域
-          artnet_ip: "",//调光发送地址
           artnet_model: "",//Artnet传输地址
-          artnet_port: 0,//调光发送端口
           device_type: "",//设备类型
           dimmer_server_ip: "",//中心服务器地址
           dimmer_server_port: 0,//中心服务器端口
-          dimmer_work_mode: 2,//三种调光模式
           local_rdm_activate: false,//是否开启RDM功能
           name: "",//设备名称
           uuid: ""//注册ID
@@ -617,6 +617,7 @@
           // }
           // this.net_config.Net_WorkMode = Number(this.net_config.Net_WorkMode)
         },
+        // 提交按钮
         submit_form: function () {
           this.$confirm('提交后会重启设备，是否继续？', '提示', {
             confirmButtonText: '确认',
